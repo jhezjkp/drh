@@ -5,15 +5,45 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 )
 
 func Decimal(value float64) float64 {
 	value, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", value), 64)
 	return value
+}
+
+func downloadAndRead(url string, path string) ([]byte, error) {
+	f := url[strings.LastIndex(url, "/")+1:]
+	fullPath := path + f
+	fi, err := os.Stat(fullPath)
+	if os.IsNotExist(err) || (err == nil && time.Now().Sub(fi.ModTime()).Hours() > 2) {
+		out, err := os.Create(fullPath)
+		if err != nil {
+			return nil, err
+		}
+		defer out.Close()
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		_, err = io.Copy(out, resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ioutil.ReadFile(fullPath)
 }
 
 func main() {
@@ -26,13 +56,10 @@ func main() {
 
 	flag.Parse()
 
-	path, err := os.Getwd()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	url := "https://www.domcomp.com/prices.json"
+	path := os.TempDir()
 
-	b, err := ioutil.ReadFile(path + "/test/prices.json")
+	b, err := downloadAndRead(url, path)
 	if err != nil {
 		log.Fatal(err)
 	}
