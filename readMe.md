@@ -1,3 +1,3 @@
-# Domain Regiser Help
+# Domain Register Helper
 
 find a cheapest domain for you.
